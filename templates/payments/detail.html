@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Payment #{{ payment.payment_id }} - {{ hotel_name }}{% endblock %}
+{% block page_title %}Payment #{{ payment.payment_id }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="actions-inline">
+        <span class="badge badge-{{ payment.payment_status|lower|replace(' ', '-') }}">{{ payment.payment_status }}</span>
+        <span class="muted">Recorded on {{ payment.payment_date }}</span>
+    </div>
+    <div class="actions-inline">
+        {% if payment.payment_status == 'Pending' %}
+        <form method="post" action="{{ url_for('payment_mark_paid', payment_id=payment.payment_id) }}" class="inline-form">
+            <input type="hidden" name="next" value="{{ url_for('payment_detail', payment_id=payment.payment_id) }}">
+            <button type="submit" class="btn btn-success btn-sm">Mark as Paid</button>
+        </form>
+        {% endif %}
+        {% if payment.outstanding_balance > 0 and payment.booking_status != 'Cancelled' %}
+        <a href="{{ url_for('payment_create', booking_id=payment.booking_id) }}" class="btn btn-primary btn-sm">Record Another Payment</a>
+        {% endif %}
+        <a href="{{ url_for('payments_list') }}" class="btn btn-secondary btn-sm">Back to Payments</a>
+    </div>
+</div>
+
+<div class="two-col-grid">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Payment Information</h2>
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="label">Payment ID</span>
+                <span class="value">#{{ payment.payment_id }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Amount</span>
+                <span class="value"><strong>{{ payment.amount|money }}</strong></span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Payment Date</span>
+                <span class="value">{{ payment.payment_date }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Payment Method</span>
+                <span class="value">{{ payment.payment_method }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Payment Status</span>
+                <span class="value">{{ payment.payment_status }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Notes</span>
+                <span class="value">{{ payment.notes or '-' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Linked Booking &amp; Balance</h2>
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="label">Booking ID</span>
+                <span class="value"><a href="{{ url_for('booking_detail', booking_id=payment.booking_id) }}">#{{ payment.booking_id }}</a></span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Customer</span>
+                <span class="value"><a href="{{ url_for('customer_detail', customer_id=payment.customer_id) }}">{{ payment.customer_name }}</a></span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Room</span>
+                <span class="value">Room {{ payment.room_number }} ({{ payment.room_type }})</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Stay Dates</span>
+                <span class="value">{{ payment.check_in_date }} to {{ payment.check_out_date }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Booking Total</span>
+                <span class="value">{{ payment.booking_total|money }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Total Paid</span>
+                <span class="value">{{ payment.booking_paid_total|money }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Remaining Balance</span>
+                <span class="value"><strong>{{ payment.outstanding_balance|money }}</strong></span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Record Payment - {{ hotel_name }}{% endblock %}
+{% block page_title %}Record Payment{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p class="page-subtitle">Log a payment transaction against an active or completed booking.</p>
+    </div>
+    <a href="{{ url_for('payments_list') }}" class="btn btn-secondary btn-sm">Back to Payments</a>
+</div>
+
+<div class="card">
+    <form method="post" id="payment-form" data-currency="{{ currency_symbol }}">
+        <div class="form-grid">
+            <div class="form-group full">
+                <label for="booking_id">Booking *</label>
+                <select id="booking_id" name="booking_id" required>
+                    <option value="">-- Select a booking --</option>
+                    {% for b in bookings %}
+                        <option value="{{ b.booking_id }}"
+                                data-total="{{ '%.2f'|format(b.total_amount) }}"
+                                data-paid="{{ '%.2f'|format(b.paid_total) }}"
+                                data-balance="{{ '%.2f'|format(b.outstanding_balance) }}"
+                                {% if form_data.booking_id|string == b.booking_id|string %}selected{% endif %}>
+                            Booking #{{ b.booking_id }} - {{ b.customer_name }} (Room {{ b.room_number }}, {{ b.booking_status }}) - Balance: {{ b.outstanding_balance|money }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="amount">Amount ({{ currency_symbol }}) *</label>
+                <input type="number" id="amount" name="amount" step="0.01" min="0.01" value="{{ form_data.amount }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="payment_date">Payment Date *</label>
+                <input type="date" id="payment_date" name="payment_date" value="{{ form_data.payment_date }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="payment_method">Payment Method *</label>
+                <select id="payment_method" name="payment_method" required>
+                    {% for m in payment_methods %}
+                        <option value="{{ m }}" {% if form_data.payment_method == m %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="payment_status">Payment Status *</label>
+                <select id="payment_status" name="payment_status" required>
+                    {% for s in payment_statuses %}
+                        <option value="{{ s }}" {% if form_data.payment_status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group full">
+                <label for="notes">Notes (Optional)</label>
+                <textarea id="notes" name="notes" placeholder="Reference number or payment remarks">{{ form_data.notes }}</textarea>
+            </div>
+        </div>
+
+        <div class="summary-box">
+            <div class="summary-item">
+                <span>Booking Total</span>
+                <strong id="pay-booking-total">-</strong>
+            </div>
+            <div class="summary-item">
+                <span>Already Paid</span>
+                <strong id="pay-booking-paid">-</strong>
+            </div>
+            <div class="summary-item">
+                <span>Outstanding Balance</span>
+                <strong id="pay-booking-balance">-</strong>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Record Payment</button>
+            <a href="{{ url_for('payments_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

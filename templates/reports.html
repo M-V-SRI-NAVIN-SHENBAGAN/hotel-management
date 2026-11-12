@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Reports - {{ hotel_name }}{% endblock %}
+{% block page_title %}Reports{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p class="page-subtitle">Revenue summary, booking volume, room type demand, customer history, and occupancy.</p>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-value">{{ summary.total_revenue|money }}</div>
+        <div class="stat-note">Pending: {{ summary.pending_revenue|money }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Bookings</div>
+        <div class="stat-value">{{ summary.total_bookings }}</div>
+        <div class="stat-note">
+            {{ summary.confirmed_bookings }} Confirmed / {{ summary.checked_in_bookings }} Checked-in
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Completed / Cancelled</div>
+        <div class="stat-value">{{ summary.checked_out_bookings }} / {{ summary.cancelled_bookings }}</div>
+        <div class="stat-note">Checked-out vs Cancelled</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Current Occupancy</div>
+        <div class="stat-value">{{ summary.occupancy_rate }}%</div>
+        <div class="stat-note">
+            {{ summary.occupied_rooms }} of {{ summary.total_rooms }} rooms occupied ({{ summary.available_rooms }} available)
+        </div>
+    </div>
+</div>
+
+<div class="two-col-grid">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Revenue by Month</h2>
+        </div>
+        {% if revenue_by_month %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th class="num">Payments</th>
+                        <th class="num">Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in revenue_by_month %}
+                    <tr>
+                        <td><strong>{{ row.month_label }}</strong></td>
+                        <td class="num">{{ row.payment_count }}</td>
+                        <td class="num"><strong>{{ row.revenue|money }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">No collected payment data available yet.</div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Most Frequently Booked Room Types</h2>
+        </div>
+        {% if room_type_stats %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Room Type</th>
+                        <th class="num">Rooms</th>
+                        <th class="num">Bookings</th>
+                        <th class="num">Total Nights</th>
+                        <th class="num">Booked Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in room_type_stats %}
+                    <tr>
+                        <td><strong>{{ row.room_type }}</strong></td>
+                        <td class="num">{{ row.room_count }}</td>
+                        <td class="num">{{ row.booking_count }}</td>
+                        <td class="num">{{ row.total_nights }}</td>
+                        <td class="num">{{ row.booked_value|money }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">No room booking data available.</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Current Room Occupancy</h2>
+    </div>
+    {% if room_occupancy %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Room</th>
+                    <th>Type</th>
+                    <th class="num">Rate / Night</th>
+                    <th>Status</th>
+                    <th>Current Guest</th>
+                    <th>Current Check-out</th>
+                    <th>Next Reservation</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in room_occupancy %}
+                <tr>
+                    <td><strong>Room {{ r.room_number }}</strong></td>
+                    <td>{{ r.room_type }}</td>
+                    <td class="num">{{ r.price_per_night|money }}</td>
+                    <td><span class="badge badge-{{ r.availability_status|lower }}">{{ r.availability_status }}</span></td>
+                    <td>
+                        {% if r.current_guest %}
+                            <a href="{{ url_for('booking_detail', booking_id=r.active_booking_id) }}">{{ r.current_guest }}</a>
+                        {% else %}
+                            <span class="muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ r.current_check_out or '-' }}</td>
+                    <td>{{ r.next_check_in or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No rooms registered.</div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Customer Booking History Summary</h2>
+    </div>
+    {% if customer_history %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Phone</th>
+                    <th class="num">Total Bookings</th>
+                    <th class="num">Total Billed</th>
+                    <th class="num">Total Paid</th>
+                    <th>Last Check-in</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in customer_history %}
+                <tr>
+                    <td><strong><a href="{{ url_for('customer_detail', customer_id=c.customer_id) }}">{{ c.full_name }}</a></strong></td>
+                    <td>{{ c.phone_number }}</td>
+                    <td class="num">{{ c.total_bookings }}</td>
+                    <td class="num">{{ c.total_billed|money }}</td>
+                    <td class="num">{{ c.total_paid|money }}</td>
+                    <td>{{ c.last_check_in or '-' }}</td>
+                    <td><a href="{{ url_for('customer_detail', customer_id=c.customer_id) }}" class="btn btn-secondary btn-sm">History</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No customers recorded.</div>
+    {% endif %}
+</div>
+{% endblock %}
