@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Check-in / Check-out - {{ hotel_name }}{% endblock %}
+{% block page_title %}Check-in / Check-out{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p class="page-subtitle">Manage front-desk arrivals, active guest stays, and room departures.</p>
+    </div>
+    <a href="{{ url_for('booking_create') }}" class="btn btn-primary btn-sm">+ New Booking</a>
+</div>
+
+<form method="get" action="{{ url_for('checkin_checkout') }}" class="filter-bar">
+    <div class="filter-group grow">
+        <label for="q">Search Booking ID, Customer Name, or Room Number</label>
+        <input type="text" id="q" name="q" value="{{ search }}" placeholder="e.g. 10, Priya Nair, or 102">
+    </div>
+    <div class="actions-inline">
+        <button type="submit" class="btn btn-secondary">Search</button>
+        {% if search %}
+            <a href="{{ url_for('checkin_checkout') }}" class="btn btn-secondary">Clear</a>
+        {% endif %}
+    </div>
+</form>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Confirmed Arrivals (Pending Check-in)</h2>
+        <span class="muted">{{ pending_checkins|length }} booking(s)</span>
+    </div>
+    {% if pending_checkins %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Booking</th>
+                    <th>Customer</th>
+                    <th>Room</th>
+                    <th>Check-in Date</th>
+                    <th>Check-out Date</th>
+                    <th class="num">Total</th>
+                    <th>Schedule</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in pending_checkins %}
+                <tr>
+                    <td><a href="{{ url_for('booking_detail', booking_id=b.booking_id) }}"><strong>#{{ b.booking_id }}</strong></a></td>
+                    <td>
+                        <a href="{{ url_for('customer_detail', customer_id=b.customer_id) }}">{{ b.customer_name }}</a>
+                        <div class="muted" style="font-size: 11.5px;">{{ b.phone_number }}</div>
+                    </td>
+                    <td>Room {{ b.room_number }} <span class="muted">({{ b.room_type }})</span></td>
+                    <td>{{ b.check_in_date }}</td>
+                    <td>{{ b.check_out_date }}</td>
+                    <td class="num">{{ b.total_amount|money }}</td>
+                    <td>
+                        {% if b.check_in_date == today %}
+                            <span class="badge badge-info">Today</span>
+                        {% elif b.check_in_date < today %}
+                            <span class="badge badge-pending">Overdue</span>
+                        {% else %}
+                            <span class="badge badge-confirmed">Upcoming</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="actions-inline">
+                            <form method="post" action="{{ url_for('booking_checkin', booking_id=b.booking_id) }}" class="inline-form">
+                                <input type="hidden" name="next" value="{{ url_for('checkin_checkout', q=search) }}">
+                                <button type="submit" class="btn btn-success btn-sm">Check In</button>
+                            </form>
+                            <a href="{{ url_for('booking_detail', booking_id=b.booking_id) }}" class="btn btn-secondary btn-sm">View</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No pending check-ins found.</div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Checked-in Guests (Pending Check-out)</h2>
+        <span class="muted">{{ active_checkouts|length }} active stay(s)</span>
+    </div>
+    {% if active_checkouts %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Booking</th>
+                    <th>Customer</th>
+                    <th>Room</th>
+                    <th>Check-in</th>
+                    <th>Check-out</th>
+                    <th class="num">Total</th>
+                    <th class="num">Balance</th>
+                    <th>Schedule</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in active_checkouts %}
+                <tr>
+                    <td><a href="{{ url_for('booking_detail', booking_id=b.booking_id) }}"><strong>#{{ b.booking_id }}</strong></a></td>
+                    <td>
+                        <a href="{{ url_for('customer_detail', customer_id=b.customer_id) }}">{{ b.customer_name }}</a>
+                        <div class="muted" style="font-size: 11.5px;">{{ b.phone_number }}</div>
+                    </td>
+                    <td>Room {{ b.room_number }} <span class="muted">({{ b.room_type }})</span></td>
+                    <td>{{ b.check_in_date }}</td>
+                    <td>{{ b.check_out_date }}</td>
+                    <td class="num">{{ b.total_amount|money }}</td>
+                    <td class="num"><strong>{{ b.outstanding_balance|money }}</strong></td>
+                    <td>
+                        {% if b.check_out_date == today %}
+                            <span class="badge badge-info">Due Today</span>
+                        {% elif b.check_out_date < today %}
+                            <span class="badge badge-pending">Overdue</span>
+                        {% else %}
+                            <span class="badge badge-checked-in">In Stay</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="actions-inline">
+                            <form method="post" action="{{ url_for('booking_checkout', booking_id=b.booking_id) }}" class="inline-form">
+                                <input type="hidden" name="next" value="{{ url_for('checkin_checkout', q=search) }}">
+                                <button type="submit" class="btn btn-primary btn-sm">Check Out</button>
+                            </form>
+                            {% if b.outstanding_balance > 0 %}
+                            <a href="{{ url_for('payment_create', booking_id=b.booking_id) }}" class="btn btn-secondary btn-sm">Pay</a>
+                            {% endif %}
+                            <a href="{{ url_for('booking_detail', booking_id=b.booking_id) }}" class="btn btn-secondary btn-sm">View</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No guests are currently checked in.</div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Recent Check-outs</h2>
+    </div>
+    {% if recent_checkouts %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Booking</th>
+                    <th>Customer</th>
+                    <th>Room</th>
+                    <th>Stay Dates</th>
+                    <th class="num">Total</th>
+                    <th>Room Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in recent_checkouts %}
+                <tr>
+                    <td><a href="{{ url_for('booking_detail', booking_id=b.booking_id) }}">#{{ b.booking_id }}</a></td>
+                    <td>{{ b.customer_name }}</td>
+                    <td>Room {{ b.room_number }} <span class="muted">({{ b.room_type }})</span></td>
+                    <td>{{ b.check_in_date }} to {{ b.check_out_date }}</td>
+                    <td class="num">{{ b.total_amount|money }}</td>
+                    <td><span class="badge badge-{{ b.room_status|lower }}">{{ b.room_status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No completed check-outs yet.</div>
+    {% endif %}
+</div>
+{% endblock %}

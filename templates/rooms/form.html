@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'edit' %}Edit Room{% else %}Add Room{% endif %} - {{ hotel_name }}{% endblock %}
+{% block page_title %}{% if mode == 'edit' %}Edit Room{% else %}Add Room{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p class="page-subtitle">
+            {% if mode == 'edit' %}Update room specifications, rate, and status.{% else %}Add a new room to the hotel inventory.{% endif %}
+        </p>
+    </div>
+    <a href="{{ url_for('rooms_list') }}" class="btn btn-secondary btn-sm">Back to Rooms</a>
+</div>
+
+<div class="card">
+    <form method="post">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="room_number">Room Number *</label>
+                <input type="text" id="room_number" name="room_number" value="{{ room.room_number }}" required placeholder="e.g. 104">
+            </div>
+
+            <div class="form-group">
+                <label for="room_type">Room Type *</label>
+                <select id="room_type" name="room_type" required>
+                    {% for t in room_types %}
+                        <option value="{{ t }}" {% if room.room_type == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="price_per_night">Price per Night ({{ currency_symbol }}) *</label>
+                <input type="number" id="price_per_night" name="price_per_night" step="0.01" min="0.01"
+                       value="{{ room.price_per_night }}" required placeholder="e.g. 120.00">
+            </div>
+
+            <div class="form-group">
+                <label for="availability_status">Availability Status *</label>
+                <select id="availability_status" name="availability_status" required>
+                    {% for s in room_statuses %}
+                        <option value="{{ s }}" {% if room.availability_status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group full">
+                <label for="description">Description (Optional)</label>
+                <textarea id="description" name="description" placeholder="Room amenities, bed setup, or notes">{{ room.description or '' }}</textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                {% if mode == 'edit' %}Save Changes{% else %}Create Room{% endif %}
+            </button>
+            <a href="{{ url_for('rooms_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

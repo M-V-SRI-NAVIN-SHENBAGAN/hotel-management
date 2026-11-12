@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'edit' %}Edit Booking #{{ booking.booking_id }}{% else %}New Booking{% endif %} - {{ hotel_name }}{% endblock %}
+{% block page_title %}{% if mode == 'edit' %}Edit Booking #{{ booking.booking_id }}{% else %}New Booking{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p class="page-subtitle">
+            {% if mode == 'edit' %}
+                Update room assignment, stay dates, or status for {{ booking.customer_name }}.
+            {% else %}
+                Select or register a customer, choose an available room, and set stay dates.
+            {% endif %}
+        </p>
+    </div>
+    <a href="{{ url_for('bookings_list') }}" class="btn btn-secondary btn-sm">Back to Bookings</a>
+</div>
+
+<div class="card">
+    <form method="post" id="booking-form" data-mode="{{ mode }}" data-currency="{{ currency_symbol }}">
+        {% if mode == 'create' %}
+        <div class="form-group" style="margin-bottom: 14px;">
+            <label>Customer</label>
+            <div class="radio-group">
+                <label class="radio-label">
+                    <input type="radio" name="customer_mode" value="existing"
+                           {% if form_data.customer_mode != 'new' %}checked{% endif %}>
+                    <span>Select Existing Customer</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="customer_mode" value="new"
+                           {% if form_data.customer_mode == 'new' %}checked{% endif %}>
+                    <span>Register New Customer</span>
+                </label>
+            </div>
+        </div>
+
+        <div id="existing-customer-section" style="margin-bottom: 16px;">
+            <div class="form-group">
+                <label for="customer_id">Customer *</label>
+                <select id="customer_id" name="customer_id">
+                    <option value="">-- Select customer --</option>
+                    {% for c in customers %}
+                        <option value="{{ c.customer_id }}"
+                                {% if form_data.customer_id|string == c.customer_id|string %}selected{% endif %}>
+                            {{ c.full_name }} ({{ c.phone_number }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div id="new-customer-section" style="display: none; margin-bottom: 16px; padding: 14px; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 6px;">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="new_full_name">Full Name *</label>
+                    <input type="text" id="new_full_name" name="new_full_name" value="{{ form_data.new_full_name }}">
+                </div>
+                <div class="form-group">
+                    <label for="new_phone_number">Phone Number *</label>
+                    <input type="text" id="new_phone_number" name="new_phone_number" value="{{ form_data.new_phone_number }}">
+                </div>
+                <div class="form-group">
+                    <label for="new_email">Email *</label>
+                    <input type="email" id="new_email" name="new_email" value="{{ form_data.new_email }}">
+                </div>
+                <div class="form-group full">
+                    <label for="new_address">Address *</label>
+                    <textarea id="new_address" name="new_address">{{ form_data.new_address }}</textarea>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="detail-grid" style="margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border);">
+            <div class="detail-item">
+                <span class="label">Customer</span>
+                <span class="value">{{ booking.customer_name }} ({{ booking.phone_number }})</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Current Booking Status</span>
+                <span class="value">{{ booking.booking_status }}</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="check_in_date">Check-in Date *</label>
+                <input type="date" id="check_in_date" name="check_in_date" value="{{ form_data.check_in_date }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="check_out_date">Check-out Date *</label>
+                <input type="date" id="check_out_date" name="check_out_date" value="{{ form_data.check_out_date }}" required>
+            </div>
+
+            <div class="form-group {% if mode == 'create' %}full{% endif %}">
+                <label for="room_id">Available Room *</label>
+                <select id="room_id" name="room_id" required>
+                    <option value="">-- Select an available room --</option>
+                    {% for r in rooms %}
+                        {% set is_date_ok = (mode == 'edit') or (r.room_id in date_filtered_room_ids) or (form_data.room_id|string == r.room_id|string) %}
+                        {% if is_date_ok %}
+                        <option value="{{ r.room_id }}"
+                                data-price="{{ '%.2f'|format(r.price_per_night) }}"
+                                {% if form_data.room_id|string == r.room_id|string %}selected{% endif %}>
+                            Room {{ r.room_number }} ({{ r.room_type }}) - {{ r.price_per_night|money }}/night
+                            {% if mode == 'edit' and r.availability_status != 'Available' %} [{{ r.availability_status }}]{% endif %}
+                        </option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if mode == 'edit' %}
+            <div class="form-group">
+                <label for="booking_status">Booking Status *</label>
+                <select id="booking_status" name="booking_status" required>
+                    {% for s in booking_statuses %}
+                        <option value="{{ s }}" {% if form_data.booking_status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div class="form-group full">
+                <label for="notes">Notes (Optional)</label>
+                <textarea id="notes" name="notes" placeholder="Guest preferences, arrival time, or special requests">{{ form_data.notes }}</textarea>
+            </div>
+        </div>
+
+        <div class="summary-box">
+            <div class="summary-item">
+                <span>Number of Nights</span>
+                <strong id="calc-nights">-</strong>
+            </div>
+            <div class="summary-item">
+                <span>Rate per Night</span>
+                <strong id="calc-rate">-</strong>
+            </div>
+            <div class="summary-item">
+                <span>Total Booking Amount</span>
+                <strong id="calc-total">-</strong>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                {% if mode == 'edit' %}Save Changes{% else %}Create Booking{% endif %}
+            </button>
+            <a href="{% if mode == 'edit' %}{{ url_for('booking_detail', booking_id=booking.booking_id) }}{% else %}{{ url_for('bookings_list') }}{% endif %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

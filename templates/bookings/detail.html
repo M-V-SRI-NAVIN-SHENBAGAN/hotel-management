@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Booking #{{ booking.booking_id }} - {{ hotel_name }}{% endblock %}
+{% block page_title %}Booking #{{ booking.booking_id }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="actions-inline">
+        <span class="badge badge-{{ booking.booking_status|lower|replace(' ', '-') }}">{{ booking.booking_status }}</span>
+        <span class="muted">Room {{ booking.room_number }} ({{ booking.room_type }})</span>
+    </div>
+    <div class="actions-inline">
+        {% if booking.booking_status == 'Confirmed' %}
+        <form method="post" action="{{ url_for('booking_checkin', booking_id=booking.booking_id) }}" class="inline-form">
+            <input type="hidden" name="next" value="{{ url_for('booking_detail', booking_id=booking.booking_id) }}">
+            <button type="submit" class="btn btn-success btn-sm">Check In</button>
+        </form>
+        {% elif booking.booking_status == 'Checked-in' %}
+        <form method="post" action="{{ url_for('booking_checkout', booking_id=booking.booking_id) }}" class="inline-form">
+            <input type="hidden" name="next" value="{{ url_for('booking_detail', booking_id=booking.booking_id) }}">
+            <button type="submit" class="btn btn-primary btn-sm">Check Out</button>
+        </form>
+        {% endif %}
+
+        {% if booking.booking_status != 'Cancelled' and booking.outstanding_balance > 0 %}
+        <a href="{{ url_for('payment_create', booking_id=booking.booking_id) }}" class="btn btn-secondary btn-sm">Record Payment</a>
+        {% endif %}
+
+        {% if booking.booking_status in ['Confirmed', 'Checked-in'] %}
+        <a href="{{ url_for('booking_edit', booking_id=booking.booking_id) }}" class="btn btn-secondary btn-sm">Edit Booking</a>
+        <form method="post" action="{{ url_for('booking_cancel', booking_id=booking.booking_id) }}" class="inline-form"
+              data-confirm="Cancel Booking #{{ booking.booking_id }}?">
+            <input type="hidden" name="next" value="{{ url_for('booking_detail', booking_id=booking.booking_id) }}">
+            <button type="submit" class="btn btn-danger btn-sm">Cancel Booking</button>
+        </form>
+        {% endif %}
+
+        <a href="{{ url_for('bookings_list') }}" class="btn btn-secondary btn-sm">Back to Bookings</a>
+    </div>
+</div>
+
+<div class="two-col-grid">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Reservation Details</h2>
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="label">Room</span>
+                <span class="value">Room {{ booking.room_number }} ({{ booking.room_type }})</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Rate per Night</span>
+                <span class="value">{{ booking.price_per_night|money }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Check-in Date</span>
+                <span class="value">{{ booking.check_in_date }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Check-out Date</span>
+                <span class="value">{{ booking.check_out_date }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Number of Nights</span>
+                <span class="value">{{ booking.num_nights }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Room Status</span>
+                <span class="value"><span class="badge badge-{{ booking.room_status|lower }}">{{ booking.room_status }}</span></span>
+            </div>
+        </div>
+        {% if booking.notes %}
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);">
+            <div class="muted" style="font-size: 12px;">Notes</div>
+            <div>{{ booking.notes }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Customer &amp; Billing</h2>
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="label">Customer Name</span>
+                <span class="value"><a href="{{ url_for('customer_detail', customer_id=booking.customer_id) }}">{{ booking.customer_name }}</a></span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Phone Number</span>
+                <span class="value">{{ booking.phone_number }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Email</span>
+                <span class="value">{{ booking.email }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Address</span>
+                <span class="value">{{ booking.address }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Total Booking Amount</span>
+                <span class="value">{{ booking.total_amount|money }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Amount Paid</span>
+                <span class="value">{{ booking.paid_amount|money }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">Outstanding Balance</span>
+                <span class="value"><strong>{{ booking.outstanding_balance|money }}</strong></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Payment History</h2>
+        {% if booking.booking_status != 'Cancelled' and booking.outstanding_balance > 0 %}
+            <a href="{{ url_for('payment_create', booking_id=booking.booking_id) }}" class="btn btn-primary btn-sm">+ Record Payment</a>
+        {% endif %}
+    </div>
+    {% if payments %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Payment ID</th>
+                    <th>Date</th>
+                    <th>Method</th>
+                    <th class="num">Amount</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payments %}
+                <tr>
+                    <td><a href="{{ url_for('payment_detail', payment_id=p.payment_id) }}">#{{ p.payment_id }}</a></td>
+                    <td>{{ p.payment_date }}</td>
+                    <td>{{ p.payment_method }}</td>
+                    <td class="num">{{ p.amount|money }}</td>
+                    <td><span class="badge badge-{{ p.payment_status|lower|replace(' ', '-') }}">{{ p.payment_status }}</span></td>
+                    <td class="muted">{{ p.notes or '-' }}</td>
+                    <td>
+                        <div class="actions-inline">
+                            <a href="{{ url_for('payment_detail', payment_id=p.payment_id) }}" class="btn btn-secondary btn-sm">View</a>
+                            {% if p.payment_status == 'Pending' %}
+                            <form method="post" action="{{ url_for('payment_mark_paid', payment_id=p.payment_id) }}" class="inline-form">
+                                <input type="hidden" name="next" value="{{ url_for('booking_detail', booking_id=booking.booking_id) }}">
+                                <button type="submit" class="btn btn-success btn-sm">Mark Paid</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No payments recorded for this booking yet.</div>
+    {% endif %}
+</div>
+{% endblock %}

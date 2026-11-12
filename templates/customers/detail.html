@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ customer.full_name }} - {{ hotel_name }}{% endblock %}
+{% block page_title %}Customer Details{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p class="page-subtitle">Customer #{{ customer.customer_id }} profile and booking history.</p>
+    </div>
+    <div class="actions-inline">
+        <a href="{{ url_for('booking_create', customer_id=customer.customer_id) }}" class="btn btn-primary btn-sm">+ New Booking</a>
+        <a href="{{ url_for('customer_edit', customer_id=customer.customer_id) }}" class="btn btn-secondary btn-sm">Edit Customer</a>
+        <a href="{{ url_for('customers_list') }}" class="btn btn-secondary btn-sm">Back to Customers</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">{{ customer.full_name }}</h2>
+        <span class="muted">Customer ID #{{ customer.customer_id }}</span>
+    </div>
+    <div class="detail-grid">
+        <div class="detail-item">
+            <span class="label">Phone Number</span>
+            <span class="value">{{ customer.phone_number }}</span>
+        </div>
+        <div class="detail-item">
+            <span class="label">Email</span>
+            <span class="value">{{ customer.email }}</span>
+        </div>
+        <div class="detail-item">
+            <span class="label">Address</span>
+            <span class="value">{{ customer.address }}</span>
+        </div>
+        <div class="detail-item">
+            <span class="label">Registered On</span>
+            <span class="value">{{ customer.created_at.strftime('%Y-%m-%d') if customer.created_at else '-' }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Booking History ({{ bookings|length }})</h2>
+    </div>
+    {% if bookings %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Booking ID</th>
+                    <th>Room</th>
+                    <th>Check-in</th>
+                    <th>Check-out</th>
+                    <th class="num">Nights</th>
+                    <th class="num">Total</th>
+                    <th class="num">Paid</th>
+                    <th class="num">Balance</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in bookings %}
+                <tr>
+                    <td><a href="{{ url_for('booking_detail', booking_id=b.booking_id) }}">#{{ b.booking_id }}</a></td>
+                    <td>Room {{ b.room_number }} <span class="muted">({{ b.room_type }})</span></td>
+                    <td>{{ b.check_in_date }}</td>
+                    <td>{{ b.check_out_date }}</td>
+                    <td class="num">{{ b.num_nights }}</td>
+                    <td class="num">{{ b.total_amount|money }}</td>
+                    <td class="num">{{ b.paid_amount|money }}</td>
+                    <td class="num">{{ b.outstanding_balance|money }}</td>
+                    <td><span class="badge badge-{{ b.booking_status|lower|replace(' ', '-') }}">{{ b.booking_status }}</span></td>
+                    <td>
+                        <a href="{{ url_for('booking_detail', booking_id=b.booking_id) }}" class="btn btn-secondary btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No bookings recorded for this customer yet.</div>
+    {% endif %}
+</div>
+{% endblock %}

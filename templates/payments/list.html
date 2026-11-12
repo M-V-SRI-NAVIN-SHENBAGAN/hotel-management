@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Payments - {{ hotel_name }}{% endblock %}
+{% block page_title %}Payments{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p class="page-subtitle">Record guest payments, track methods, and monitor outstanding balances.</p>
+    </div>
+    <a href="{{ url_for('payment_create') }}" class="btn btn-primary btn-sm">+ Record Payment</a>
+</div>
+
+<div class="stats-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+    <div class="stat-card">
+        <div class="stat-label">Total Revenue (Collected)</div>
+        <div class="stat-value">{{ summary.total_revenue|money }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Pending Payments</div>
+        <div class="stat-value">{{ summary.total_pending|money }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Recorded Transactions</div>
+        <div class="stat-value">{{ summary.total_transactions }}</div>
+    </div>
+</div>
+
+<form method="get" action="{{ url_for('payments_list') }}" class="filter-bar">
+    <div class="filter-group grow">
+        <label for="q">Search Payment ID, Booking ID, or Customer</label>
+        <input type="text" id="q" name="q" value="{{ search }}" placeholder="e.g. 6, 10, or Daniel Brooks">
+    </div>
+    <div class="filter-group">
+        <label for="method">Payment Method</label>
+        <select id="method" name="method">
+            <option value="">All Methods</option>
+            {% for m in payment_methods %}
+                <option value="{{ m }}" {% if method == m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="status">Payment Status</label>
+        <select id="status" name="status">
+            <option value="">All Statuses</option>
+            {% for s in payment_statuses %}
+                <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="actions-inline">
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search or method or status %}
+            <a href="{{ url_for('payments_list') }}" class="btn btn-secondary">Clear</a>
+        {% endif %}
+    </div>
+</form>
+
+<div class="card">
+    {% if payments %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Payment ID</th>
+                    <th>Booking ID</th>
+                    <th>Customer</th>
+                    <th>Room</th>
+                    <th>Payment Date</th>
+                    <th>Method</th>
+                    <th class="num">Amount</th>
+                    <th class="num">Booking Balance</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payments %}
+                <tr>
+                    <td><a href="{{ url_for('payment_detail', payment_id=p.payment_id) }}"><strong>#{{ p.payment_id }}</strong></a></td>
+                    <td><a href="{{ url_for('booking_detail', booking_id=p.booking_id) }}">#{{ p.booking_id }}</a></td>
+                    <td><a href="{{ url_for('customer_detail', customer_id=p.customer_id) }}">{{ p.customer_name }}</a></td>
+                    <td>Room {{ p.room_number }}</td>
+                    <td>{{ p.payment_date }}</td>
+                    <td>{{ p.payment_method }}</td>
+                    <td class="num"><strong>{{ p.amount|money }}</strong></td>
+                    <td class="num">{{ p.outstanding_balance|money }}</td>
+                    <td><span class="badge badge-{{ p.payment_status|lower|replace(' ', '-') }}">{{ p.payment_status }}</span></td>
+                    <td>
+                        <div class="actions-inline">
+                            <a href="{{ url_for('payment_detail', payment_id=p.payment_id) }}" class="btn btn-secondary btn-sm">View</a>
+                            {% if p.payment_status == 'Pending' %}
+                            <form method="post" action="{{ url_for('payment_mark_paid', payment_id=p.payment_id) }}" class="inline-form">
+                                <input type="hidden" name="next" value="{{ url_for('payments_list', q=search, method=method, status=status) }}">
+                                <button type="submit" class="btn btn-success btn-sm">Mark Paid</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No payment records match the current filters.</div>
+    {% endif %}
+</div>
+{% endblock %}

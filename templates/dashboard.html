@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - {{ hotel_name }}{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p class="page-subtitle">Daily overview of rooms, guests, bookings, and revenue.</p>
+    </div>
+    <div class="actions-inline">
+        <a href="{{ url_for('booking_create') }}" class="btn btn-primary btn-sm">+ New Booking</a>
+        <a href="{{ url_for('checkin_checkout') }}" class="btn btn-secondary btn-sm">Check-in / Check-out</a>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Rooms</div>
+        <div class="stat-value">{{ stats.total_rooms }}</div>
+        <div class="stat-note">{{ stats.maintenance_rooms }} in maintenance</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Available Rooms</div>
+        <div class="stat-value">{{ stats.available_rooms }}</div>
+        <div class="stat-note">Ready for guests</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Occupied Rooms</div>
+        <div class="stat-value">{{ stats.occupied_rooms }}</div>
+        <div class="stat-note">Currently checked in</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Customers</div>
+        <div class="stat-value">{{ stats.total_customers }}</div>
+        <div class="stat-note">Registered profiles</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Active Bookings</div>
+        <div class="stat-value">{{ stats.active_bookings }}</div>
+        <div class="stat-note">Confirmed &amp; checked-in</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Today's Check-ins</div>
+        <div class="stat-value">{{ stats.today_checkins }}</div>
+        <div class="stat-note">Scheduled for {{ today_iso }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Today's Check-outs</div>
+        <div class="stat-value">{{ stats.today_checkouts }}</div>
+        <div class="stat-note">Departures for {{ today_iso }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-value">{{ stats.total_revenue|money }}</div>
+        <div class="stat-note">Collected payments</div>
+    </div>
+</div>
+
+<div class="two-col-grid">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Today's Check-ins</h2>
+            <a href="{{ url_for('checkin_checkout') }}" class="btn btn-secondary btn-sm">View All</a>
+        </div>
+        {% if today_checkins %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Booking</th>
+                        <th>Customer</th>
+                        <th>Room</th>
+                        <th>Check-out</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in today_checkins %}
+                    <tr>
+                        <td><a href="{{ url_for('booking_detail', booking_id=b.booking_id) }}">#{{ b.booking_id }}</a></td>
+                        <td>
+                            <a href="{{ url_for('customer_detail', customer_id=b.customer_id) }}">{{ b.customer_name }}</a>
+                            <div class="muted" style="font-size: 11.5px;">{{ b.phone_number }}</div>
+                        </td>
+                        <td>Room {{ b.room_number }} <span class="muted">({{ b.room_type }})</span></td>
+                        <td>{{ b.check_out_date }}</td>
+                        <td><span class="badge badge-{{ b.booking_status|lower|replace(' ', '-') }}">{{ b.booking_status }}</span></td>
+                        <td>
+                            {% if b.booking_status == 'Confirmed' %}
+                            <form method="post" action="{{ url_for('booking_checkin', booking_id=b.booking_id) }}" class="inline-form">
+                                <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
+                                <button type="submit" class="btn btn-success btn-sm">Check In</button>
+                            </form>
+                            {% else %}
+                            <a href="{{ url_for('booking_detail', booking_id=b.booking_id) }}" class="btn btn-secondary btn-sm">Details</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">No check-ins scheduled for today.</div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Today's Check-outs</h2>
+            <a href="{{ url_for('checkin_checkout') }}" class="btn btn-secondary btn-sm">View All</a>
+        </div>
+        {% if today_checkouts %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Booking</th>
+                        <th>Customer</th>
+                        <th>Room</th>
+                        <th class="num">Balance</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in today_checkouts %}
+                    <tr>
+                        <td><a href="{{ url_for('booking_detail', booking_id=b.booking_id) }}">#{{ b.booking_id }}</a></td>
+                        <td>
+                            <a href="{{ url_for('customer_detail', customer_id=b.customer_id) }}">{{ b.customer_name }}</a>
+                            <div class="muted" style="font-size: 11.5px;">{{ b.phone_number }}</div>
+                        </td>
+                        <td>Room {{ b.room_number }} <span class="muted">({{ b.room_type }})</span></td>
+                        <td class="num">{{ b.outstanding_balance|money }}</td>
+                        <td><span class="badge badge-{{ b.booking_status|lower|replace(' ', '-') }}">{{ b.booking_status }}</span></td>
+                        <td>
+                            <div class="actions-inline">
+                                {% if b.booking_status == 'Checked-in' %}
+                                <form method="post" action="{{ url_for('booking_checkout', booking_id=b.booking_id) }}" class="inline-form">
+                                    <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
+                                    <button type="submit" class="btn btn-primary btn-sm">Check Out</button>
+                                </form>
+                                {% else %}
+                                <a href="{{ url_for('booking_detail', booking_id=b.booking_id) }}" class="btn btn-secondary btn-sm">Details</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">No check-outs scheduled for today.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
